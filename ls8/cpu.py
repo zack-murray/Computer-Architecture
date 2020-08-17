@@ -2,12 +2,32 @@
 
 import sys
 
+# Instantiate instruction codes
+HLT = 0b00000001 # exits emulator
+LDI = 0b10000010 # sets a specified register to a value
+PRN = 0b01000111 # print value stored in register
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        # Able to hold 256 bytes of memeory
+        self.ram = [0] * 256
+        # Able to hold 8 general-purpose registers
+        self.reg = [0] * 8
+        # Program counter
+        self.pc = 0
+        # CPU running
+        self.running = True
+
+    def ram_read(self, address):
+        """Accept address to read and return stored value"""
+        return self.ram[address]
+
+    def ram_write(self, value, address):
+        """Accept a value to write, and the address to write it to"""
+        self.ram[address] = value
 
     def load(self):
         """Load a program into memory."""
@@ -62,4 +82,22 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+        # Instantiate the instruction register
+        ir = self.ram_read(self.pc)
+        # Instantiate operand_a, operand_b (reg_num, value) to read bytes at PC+1 and PC+2 
+        operand_a, operand_b = self.ram_read(self.pc + 1), self.ram_read(self.pc + 2)
+        # Halt the CPU (and exit the emulator)
+        if ir == HLT:
+            self.running = False
+        # Set the value of a register to an integer
+        elif ir == LDI:
+            self.ram_write(operand_b, operand_a)
+            # Registers[reg_num] = value
+            self.reg[operand_a] = operand_b
+            # Increment the counter
+            self.pc += 3
+        # Print numeric value stored in the given register
+        elif ir == PRN:
+            print(self.reg[operand_a])
+            # Increment the counter
+            self.pc += 2
