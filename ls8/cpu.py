@@ -82,22 +82,22 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        # Instantiate the instruction register
-        ir = self.ram_read(self.pc)
-        # Instantiate operand_a, operand_b (reg_num, value) to read bytes at PC+1 and PC+2 
-        operand_a, operand_b = self.ram_read(self.pc + 1), self.ram_read(self.pc + 2)
-        # Halt the CPU (and exit the emulator)
-        if ir == HLT:
-            self.running = False
-        # Set the value of a register to an integer
-        elif ir == LDI:
-            self.ram_write(operand_b, operand_a)
-            # Registers[reg_num] = value
-            self.reg[operand_a] = operand_b
-            # Increment the counter
-            self.pc += 3
-        # Print numeric value stored in the given register
-        elif ir == PRN:
-            print(self.reg[operand_a])
-            # Increment the counter
-            self.pc += 2
+        while self.running:
+            # Instantiate the instruction register
+            ir = self.ram_read(self.pc)
+            # Instantiate operand_a, operand_b (reg_num, value) to read bytes at PC+1 and PC+2 
+            operand_a, operand_b = self.ram_read(self.pc + 1), self.ram_read(self.pc + 2)
+            # Halt the CPU (and exit the emulator)
+            if ir == HLT:
+                self.running = False
+            # Set the value of a register to an integer
+            elif ir == LDI:
+                # Registers[reg_num] = value
+                self.reg[operand_a] = operand_b
+                # Increment the counter
+                self.pc += 3
+                # Print numeric value stored in the given register
+            elif ir == PRN:
+                print(self.reg[operand_a])
+                # Increment the counter
+                self.pc += 2
