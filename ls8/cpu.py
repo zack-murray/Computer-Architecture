@@ -13,6 +13,17 @@ PUSH = 0b01000101 # push onto the stack
 POP = 0b01000110 # pop off the stack
 CALL = 0b01010000 # calls a subroutine at address stored in register
 RET = 0b00010001 # return from subroutine
+CMP = 0b10100111 # compare values in two registers
+JMP = 0b01010100 # jump to address stored in given register
+JEQ = 0b01010101 # equal if flag is set true
+JNE = 0b01010110 # not equal if flag is clear
+AND = 0b10101000 # bitwise-AND values in registerA and registerB
+OR = 0b10101010 # bitwise-OR values in registerA and registerB
+XOR = 0b10101011 # bitwise-XOR values in registerA and registerB
+NOT = 0b01101001 # bitwise-NOT on value in a register
+SHL = 0b10101100 # shift value in registerA by # of bits specified in registerB
+SHR = 0b10101101 # shift value in registerA by # of bits specified in registerB
+MOD = 0b10100100 # divide value in registerA by registerB, store remainder
 
 class CPU:
     """Main CPU class."""
@@ -40,7 +51,18 @@ class CPU:
             PUSH: self.PUSH,
             POP: self.POP,
             CALL: self.CALL,
-            RET: self.RET
+            RET: self.RET,
+            CMP: self.CMP,
+            JMP: self.JMP,
+            JEQ: self.JEQ,
+            JNE: self.JNE,
+            AND: self.AND, 
+            OR: self.OR,
+            XOR: self.XOR,
+            NOT: self.NOT,
+            SHL: self.SHL,
+            SHR: self.SHR,
+            MOD: self.MOD,
         }
 
     def ram_read(self, address):
@@ -117,6 +139,68 @@ class CPU:
         self.pc = self.ram_read(self.reg[self.sp])
         # Increment the stack pointer
         self.reg[self.sp] += 1
+    
+    def CMP(self, operand_a, operand_b):
+        """Compare the values in two registers"""
+        self.alu("CMP", operand_a, operand_b)
+        self.pc += 3
+    
+    def JMP(self, operand_a, operand_b=None):
+        """Jump to address stored in the given register, set PC to address stored in given register"""
+        self.pc = self.reg[operand_a]
+
+    def JEQ(self, operand_a, operand_b=None):
+        """If equal flag is set (true), jump to the address stored in the given register"""
+        # If flag is set to equal
+        if self.fl == 0b00000001:
+            # Jump there (set pc to address stored in register)
+            self.pc = self.reg[operand_a]
+        else:
+            self.pc += 2
+    
+    def JNE(self, operand_a, operand_b=None):
+        """If equal flag is clear (false, 0), jump to the address stored in the given register"""
+        # If flag is set to g or l
+        if self.fl != 0b00000001:
+            # Jump there (set pc to address stored in register)
+            self.pc = self.reg[operand_a]
+        else:
+            self.pc += 2
+    
+    def AND(self, operand_a, operand_b):
+        """Bitwise-AND the values in registerA and registerB, then store the result in registerA"""
+        self.alu("AND", operand_a, operand_b)
+        self.pc += 3
+
+    def OR(self, operand_a, operand_b):
+        """Perform a bitwise-OR between the values in registerA and registerB, storing the result in registerA"""
+        self.alu("OR", operand_a, operand_b)
+        self.pc += 3
+    
+    def XOR(self, operand_a, operand_b):
+        """Perform a bitwise-XOR between the values in registerA and registerB, storing the result in registerA"""
+        self.alu("XOR", operand_a, operand_b)
+        self.pc += 3
+    
+    def NOT(self, operand_a, operand_b=None):
+        """Perform a bitwise-NOT on the value in a register, storing the result in the register."""
+        self.alu("NOT", operand_a, operand_b)
+        self.pc += 2
+    
+    def SHL(self, operand_a, operand_b):
+        """Shift the value in registerA left by the number of bits specified in registerB, filling the low bits with 0."""
+        self.alu("SHL", operand_a, operand_b)
+        self.pc += 3
+    
+    def SHR(self, operand_a, operand_b):
+        """Shift the value in registerA right by the number of bits specified in registerB, filling the high bits with 0."""
+        self.alu("SHR", operand_a, operand_b)
+        self.pc += 3
+    
+    def MOD(self, operand_a, operand_b):
+        """Divide the value in the first register by the value in the second, storing the remainder of the result in registerA."""
+        self.alu("MOD", operand_a, operand_b)
+        self.pc += 3
 
     def load(self, filename=None):
         """Load a program into memory."""
@@ -167,6 +251,32 @@ class CPU:
             self.reg[reg_a] -= self.reg[reg_b]
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "CMP":
+            """0b00000LGE"""
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.fl = 0b00000001
+            elif self.reg[reg_a] < self.reg[reg_b]:
+                self.fl = 0b00000100
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.fl = 0b00000010
+        elif op == "AND":
+            self.reg[reg_a] = self.reg[reg_a] & self.reg[reg_b]
+        elif op == "OR":
+            self.reg[reg_a] = self.reg[reg_a] | self.reg[reg_b]
+        elif op == "XOR":
+            self.reg[reg_a] = self.reg[reg_a] ^ self.reg[reg_b]
+        elif op == "NOT":
+            self.reg[reg_a] = ~self.reg[reg_a]
+        elif op == "SHL":
+            self.reg[reg_a] = self.reg[reg_a] >> self.reg[reg_b]
+        elif op == "SHR":
+            self.reg[reg_a] = self.reg[reg_a] << self.reg[reg_b]
+        elif op == "MOD":
+            if self.reg[reg_b] == 0:
+                print("ERROR: Undefined, cannot divide by 0")
+                self.running = False
+            else:
+                self.reg[reg_a] = self.reg[reg_a] % self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
