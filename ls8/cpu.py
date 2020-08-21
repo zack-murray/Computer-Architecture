@@ -11,6 +11,8 @@ SUB = 0b10100001 # subtract the value in the second register from the first & st
 MUL = 0b10100010 # multiply the values in two registers & store result in registerA
 PUSH = 0b01000101 # push onto the stack
 POP = 0b01000110 # pop off the stack
+CALL = 0b01010000 # calls a subroutine at address stored in register
+RET = 0b00010001 # return from subroutine
 
 class CPU:
     """Main CPU class."""
@@ -36,7 +38,9 @@ class CPU:
             SUB: self.SUB, 
             MUL: self.MUL,
             PUSH: self.PUSH,
-            POP: self.POP
+            POP: self.POP,
+            CALL: self.CALL,
+            RET: self.RET
         }
 
     def ram_read(self, address):
@@ -53,12 +57,16 @@ class CPU:
 
     def LDI(self, operand_a, operand_b):
         """Set the value of a register to an integer"""
+        # Registers[reg_num] = value
         self.reg[operand_a] = operand_b
+        # Increment the program counter 
         self.pc += 3
 
     def PRN(self, operand_a, operand_b=None):
         """Print numeric value stored in the given register"""
+        # Print value in given register
         print(self.reg[operand_a])
+        # Increment the program counter
         self.pc += 2
 
     def ADD(self, operand_a, operand_b):
@@ -78,15 +86,37 @@ class CPU:
 
     def PUSH(self, operand_a, operand_b=None):
         """Push the value in the given register on the stack"""
+        # Decrement the stack pointer
         self.reg[self.sp] -= 1
+        # Take value in register, push it to the top of the stack in memory
         self.ram_write(self.reg[operand_a], self.reg[self.sp])
+        # Increment the program counter 
         self.pc += 2
 
     def POP(self, operand_a, operand_b=None):
         """Pop the value at the top of the stack into the given register"""
+        # Take the value off the top of the stack, put it into given register
         self.reg[operand_a] = self.ram_read(self.reg[self.sp])
+        # Increment the stack pointer
         self.reg[self.sp] += 1
+        # Increment the program counter
         self.pc += 2
+    
+    def CALL(self, operand_a, operand_b=None):
+        """Calls a subroutine (function) at the address stored in the register."""
+        # Decrement the stack pointer 
+        self.reg[self.sp] -= 1
+        # Take the value at pc + 2, store it at the stack pointer
+        self.ram_write(self.pc + 2, self.reg[self.sp])
+        # Set PC to address stored in given register
+        self.pc = self.reg[operand_a]
+    
+    def RET(self, operand_a=None, operand_b=None):
+        """Return from subroutine, pop the value from the top of the stack and store it in pc"""
+        # Take the value stored at the stack pointer and put it in pc 
+        self.pc = self.ram_read(self.reg[self.sp])
+        # Increment the stack pointer
+        self.reg[self.sp] += 1
 
     def load(self, filename=None):
         """Load a program into memory."""
@@ -169,49 +199,3 @@ class CPU:
             # Instantiate operand_a, operand_b (reg_num, value) to read bytes at PC+1 and PC+2 
             operand_a, operand_b = self.ram_read(self.pc + 1), self.ram_read(self.pc + 2)
             self.branchtable[ir](operand_a, operand_b)
-            # # Halt the CPU (and exit the emulator)
-            # if ir == HLT:
-            #     self.running = False
-            # # Set the value of a register to an integer
-            # elif ir == LDI:
-            #     # Registers[reg_num] = value
-            #     self.reg[operand_a] = operand_b
-            #     # Increment the counter
-            #     self.pc += 3
-            # # Print numeric value stored in the given register
-            # elif ir == PRN:
-            #     print(self.reg[operand_a])
-            #     # Increment the counter
-            #     self.pc += 2
-            # # Add value of two registers & store result in registerA    
-            # elif ir == ADD:
-            #     self.alu("ADD", operand_a, operand_b)
-            #     # Increment the counter
-            #     self.pc += 3
-            # # Subtract the value in the second register from the first & 
-            # # store result in registerA
-            # elif ir == SUB:
-            #     self.alu("SUB", operand_a, operand_b)
-            #     # Increment the counter
-            #     self.pc += 3
-            # # Multiply the values in two registers & store result in registerA
-            # elif ir == MUL:
-            #     self.alu("MUL", operand_a, operand_b)
-            #     # Increment the counter
-            #     self.pc += 3
-            # # Push the value in the given register on the stack
-            # elif ir == PUSH:
-            #     # Decrement the stack pointer
-            #     self.reg[self.sp] -= 1
-            #     # Copy the value in the given register to the address pointed to by SP
-            #     self.ram_write(self.reg[operand_a], self.reg[self.sp])
-            #     # Increment the program counter
-            #     self.pc += 2
-            # # Pop the value at the top of the stack into the given register
-            # elif ir == POP:
-            #     # Copy the value from the address pointed to by SP to the given register
-            #     self.reg[operand_a] = self.ram_read(self.reg[self.sp])
-            #     # Increment the stack pointer
-            #     self.reg[self.sp] += 1
-            #     # Increment the program counter
-            #     self.pc += 2
